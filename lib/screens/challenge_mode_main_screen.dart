@@ -22,6 +22,8 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
   int _currentQuestion = 1;
   int _remainingTime = 0;
   Timer? _timer;
+  int _handRemainingTime = 0;
+  Timer? _handTimer;
   int _correctCount = 0;
   Set<int> _selectedWinnerIndices = {};
   List<List<String>> _playerCards = [];
@@ -103,12 +105,45 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
     });
   }
 
+  void _startHandTimer() {
+    _handRemainingTime = widget.timeLimit;
+    _handTimer?.cancel();
+    _handTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _handRemainingTime--;
+        if (_handRemainingTime <= 0) {
+          _handTimer?.cancel();
+          _onHandTimeUp();
+        }
+      });
+    });
+  }
+
   void _onTimeUp() {
     setState(() {
-      _winnerJudged = true;
-      _winnerCorrect = false;
-      _handJudged = true;
-      _handCorrect = false;
+      if (!_winnerJudged) {
+        _winnerJudged = true;
+        _winnerCorrect = false;
+        _handJudged = true;
+        _handCorrect = false;
+        _timer?.cancel();
+        _handTimer?.cancel();
+      } else if (_winnerCorrect && !_handJudged) {
+        // 役選択中のタイムアップ
+        _handJudged = true;
+        _handCorrect = false;
+        _handTimer?.cancel();
+      }
+    });
+  }
+
+  void _onHandTimeUp() {
+    setState(() {
+      if (_winnerCorrect && !_handJudged) {
+        _handJudged = true;
+        _handCorrect = false;
+        _handTimer?.cancel();
+      }
     });
   }
 
@@ -122,8 +157,13 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
       if (!allCorrect) {
         _handJudged = true;
         _handCorrect = false;
+        _timer?.cancel();
+        _handTimer?.cancel();
+      } else {
+        // 勝者正解時は役選択用タイマーを新たにスタート
+        _timer?.cancel();
+        _startHandTimer();
       }
-      _timer?.cancel();
     });
   }
 
@@ -134,6 +174,7 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
       _handJudged = true;
       _handCorrect = handCorrect;
       if (_winnerCorrect && handCorrect) _correctCount++;
+      _handTimer?.cancel();
     });
   }
 
@@ -150,6 +191,7 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
       });
       _dealCardsAndSetWinners();
       _startTimer();
+      _handTimer?.cancel();
     } else {
       showDialog(
         context: context,
@@ -170,6 +212,7 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _handTimer?.cancel();
     super.dispose();
   }
 
@@ -209,55 +252,59 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
 
   Widget _buildHandSelection() {
     final winnerCards = [..._playerCards[_mainWinnerIndex], ..._boardCards];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('勝者のカード (手札＋ボード)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        SizedBox(height: 8),
-        Wrap(
-          children: winnerCards.map(_buildCardWidget).toList(),
-        ),
-        SizedBox(height: 20),
-        Text('あなたの考えた役を選んでください', style: TextStyle(fontSize: 18)),
-        SizedBox(height: 10),
-        ..._hands.map((hand) => RadioListTile<String>(
-              title: Text(hand),
-              value: hand,
-              groupValue: _selectedHand,
-              onChanged: _handJudged
-                  ? null
-                  : (value) {
-                      setState(() {
-                        _selectedHand = value;
-                      });
-                    },
-            )),
-        SizedBox(height: 16),
-        if (!_handJudged)
-          Center(
-            child: ElevatedButton(
-              onPressed: _selectedHand == null ? null : _onJudgeHand,
-              child: Text('役を判定'),
-            ),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('役判定 残り時間: $_handRemainingTime 秒', style: TextStyle(fontSize: 18)),
+          SizedBox(height: 8),
+          Text('勝者のカード (手札＋ボード)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Wrap(
+            children: winnerCards.map(_buildCardWidget).toList(),
           ),
-        if (_handJudged)
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  _handCorrect ? '✅ 正解！' : '❌ 不正解！',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                Text('正解の役: $_correctHandName'),
-                SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: _nextQuestion,
-                  child: Text('次の問題へ'),
-                ),
-              ],
+          SizedBox(height: 20),
+          Text('あなたの考えた役を選んでください', style: TextStyle(fontSize: 18)),
+          SizedBox(height: 10),
+          ..._hands.map((hand) => RadioListTile<String>(
+                title: Text(hand),
+                value: hand,
+                groupValue: _selectedHand,
+                onChanged: _handJudged
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _selectedHand = value;
+                        });
+                      },
+              )),
+          SizedBox(height: 16),
+          if (!_handJudged)
+            Center(
+              child: ElevatedButton(
+                onPressed: _selectedHand == null ? null : _onJudgeHand,
+                child: Text('役を判定'),
+              ),
             ),
-          ),
-      ],
+          if (_handJudged)
+            Center(
+              child: Column(
+                children: [
+                  Text(
+                    _handCorrect ? '✅ 正解！' : '❌ 不正解！',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  Text('正解の役: $_correctHandName'),
+                  SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: _nextQuestion,
+                    child: Text('次の問題へ'),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 

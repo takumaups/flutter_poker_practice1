@@ -65,7 +65,7 @@ class _ChallengeModeSettingsScreenState extends State<ChallengeModeSettingsScree
             Text('制限時間（1問あたり）', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Row(
               children: [
-                for (var sec in [3, 5, 10])
+                for (var sec in [5, 7, 10])
                   Row(
                     children: [
                       Radio<int>(
