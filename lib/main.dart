@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/player_count_screen.dart';
+import 'screens/mode_selection_screen.dart';
 
 void main() {
   runApp(PokerPracticeApp());
@@ -13,7 +14,7 @@ class PokerPracticeApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: PlayerCountScreen(),
+      home: ModeSelectionScreen(),
     );
   }
 }
