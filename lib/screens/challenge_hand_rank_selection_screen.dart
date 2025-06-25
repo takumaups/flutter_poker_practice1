@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
 import '../utils/card_utils.dart';
 import '../utils/poker_hand_evaluator.dart';
+import 'dart:async';
 
-class HandRankSelectionScreen extends StatefulWidget {
+class ChallengeHandRankSelectionScreen extends StatefulWidget {
   final List<List<String>> playerCards;
   final List<String> boardCards;
   final int winnerIndex;
+  final int? timeLimit;
 
-  HandRankSelectionScreen({
+  ChallengeHandRankSelectionScreen({
     required this.playerCards,
     required this.boardCards,
     required this.winnerIndex,
+    this.timeLimit,
   });
 
   @override
-  _HandRankSelectionScreenState createState() => _HandRankSelectionScreenState();
+  _ChallengeHandRankSelectionScreenState createState() => _ChallengeHandRankSelectionScreenState();
 }
 
-class _HandRankSelectionScreenState extends State<HandRankSelectionScreen> {
+class _ChallengeHandRankSelectionScreenState extends State<ChallengeHandRankSelectionScreen> {
   final List<String> hands = [
     'ハイカード',
     'ワンペア',
@@ -36,6 +39,8 @@ class _HandRankSelectionScreenState extends State<HandRankSelectionScreen> {
   late PokerHandEvaluator evaluator;
   late HandResult correctResult;
   late int currentWinnerIndex;
+  int _remainingTime = 0;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -44,6 +49,49 @@ class _HandRankSelectionScreenState extends State<HandRankSelectionScreen> {
     winnerCards = [...widget.playerCards[currentWinnerIndex], ...widget.boardCards];
     evaluator = PokerHandEvaluator();
     correctResult = evaluator.evaluate(winnerCards);
+    if (widget.timeLimit != null) {
+      _remainingTime = widget.timeLimit!;
+      _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+        setState(() {
+          _remainingTime--;
+          if (_remainingTime <= 0) {
+            _timer?.cancel();
+            _onTimeUp();
+          }
+        });
+      });
+    }
+  }
+
+  void _onTimeUp() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('時間切れ... 😢'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('正解の役: ${correctResult.name}'),
+            SizedBox(height: 10),
+            Text('勝者: プレイヤー${currentWinnerIndex + 1}'),
+            SizedBox(height: 10),
+            Text('【役判定の詳細】'),
+            Wrap(
+              children: winnerCards.map(buildCardWidget).toList(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context, false);
+            },
+            child: Text('次の問題へ'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget buildCardWidget(String card) {
@@ -105,6 +153,7 @@ class _HandRankSelectionScreenState extends State<HandRankSelectionScreen> {
     if (selectedHand == null) return;
 
     bool correctHand = selectedHand == correctResult.name;
+    _timer?.cancel();
 
     showDialog(
       context: context,
@@ -132,16 +181,15 @@ class _HandRankSelectionScreenState extends State<HandRankSelectionScreen> {
             },
             child: Text('次の問題へ'),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context, false);
-            },
-            child: Text('人数選択に戻る'),
-          ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -155,6 +203,8 @@ class _HandRankSelectionScreenState extends State<HandRankSelectionScreen> {
           padding: EdgeInsets.all(12),
           child: Column(
             children: [
+              if (widget.timeLimit != null)
+                Text('残り時間: $_remainingTime 秒', style: TextStyle(fontSize: 18)),
               Text('勝者のカード (手札＋ボード)',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
@@ -205,4 +255,4 @@ class _HandRankSelectionScreenState extends State<HandRankSelectionScreen> {
       ),
     );
   }
-}
+} 

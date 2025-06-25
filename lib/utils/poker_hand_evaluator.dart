@@ -142,10 +142,11 @@ class PokerHandEvaluator {
     Set<int> setRanks = inputRanks.toSet();
     List<int> ranks = setRanks.toList()..sort((a, b) => b.compareTo(a));
 
+    // 通常のストレート判定
     for (int i = 0; i <= ranks.length - 5; i++) {
       bool straight = true;
-      for (int j = 0; j < 4; j++) {
-        if (!ranks.contains(ranks[i] - j)) {
+      for (int j = 1; j < 5; j++) {
+        if (ranks[i + j - 1] - 1 != ranks[i + j]) {
           straight = false;
           break;
         }
@@ -153,6 +154,7 @@ class PokerHandEvaluator {
       if (straight) return ranks[i];
     }
 
+    // ローボールストレート（A-2-3-4-5）
     if (setRanks.containsAll([14, 5, 4, 3, 2])) {
       return 5;
     }

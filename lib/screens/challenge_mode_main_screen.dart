@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../utils/card_utils.dart';
 import '../utils/poker_hand_evaluator.dart';
+import 'challenge_hand_rank_selection_screen.dart';
+import 'challenge_mode_settings_screen.dart';
+import 'mode_selection_screen.dart';
+import 'challenge_review_screen.dart';
 
 class ChallengeModeMainScreen extends StatefulWidget {
   final int questionCount;
@@ -52,6 +56,10 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
     'ストレートフラッシュ',
     'ロイヤルフラッシュ',
   ];
+
+  String? judgeResultMessage;
+
+  List<ChallengeHistoryEntry> _history = [];
 
   @override
   void initState() {
@@ -126,12 +134,14 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
         _winnerCorrect = false;
         _handJudged = true;
         _handCorrect = false;
+        judgeResultMessage = '時間切れ！';
         _timer?.cancel();
         _handTimer?.cancel();
       } else if (_winnerCorrect && !_handJudged) {
         // 役選択中のタイムアップ
         _handJudged = true;
         _handCorrect = false;
+        judgeResultMessage = '時間切れ！';
         _handTimer?.cancel();
       }
     });
@@ -147,7 +157,7 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
     });
   }
 
-  void _onJudgeWinner() {
+  void _onJudgeWinner() async {
     if (_winnerJudged) return;
     bool allCorrect = _selectedWinnerIndices.length == _correctWinnerIndices.length &&
         _selectedWinnerIndices.containsAll(_correctWinnerIndices);
@@ -159,12 +169,30 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
         _handCorrect = false;
         _timer?.cancel();
         _handTimer?.cancel();
-      } else {
-        // 勝者正解時は役選択用タイマーを新たにスタート
-        _timer?.cancel();
-        _startHandTimer();
       }
     });
+    if (allCorrect) {
+      _timer?.cancel();
+      _handTimer?.cancel();
+      // HandRankSelectionScreenに遷移し、役判定の正誤を受け取る
+      final result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChallengeHandRankSelectionScreen(
+            playerCards: _playerCards,
+            boardCards: _boardCards,
+            winnerIndex: _correctWinnerIndices[0],
+            timeLimit: widget.timeLimit,
+          ),
+        ),
+      );
+      if (result == true) {
+        setState(() {
+          _correctCount++;
+        });
+      }
+      _nextQuestion();
+    }
   }
 
   void _onJudgeHand() {
@@ -192,18 +220,28 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
       _dealCardsAndSetWinners();
       _startTimer();
       _handTimer?.cancel();
+      // 履歴を記録
+      _history.add(ChallengeHistoryEntry(
+        questionNumber: _currentQuestion,
+        playerCards: List<List<String>>.from(_playerCards.map((e) => List<String>.from(e))),
+        boardCards: List<String>.from(_boardCards),
+        selectedWinnerIndices: Set<int>.from(_selectedWinnerIndices),
+        correctWinnerIndices: List<int>.from(_correctWinnerIndices),
+        winnerCorrect: _winnerCorrect,
+        selectedHand: _selectedHand,
+        correctHand: _correctHandName,
+        handCorrect: _handCorrect,
+        timeUp: judgeResultMessage == '時間切れ！',
+      ));
     } else {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('終了'),
-          content: Text('正答数: $_correctCount / ${widget.questionCount}'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('OK'),
-            ),
-          ],
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChallengeReviewScreen(
+            history: _history,
+            correctCount: _correctCount,
+            totalCount: widget.questionCount,
+          ),
         ),
       );
     }
@@ -251,61 +289,8 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
   }
 
   Widget _buildHandSelection() {
-    final winnerCards = [..._playerCards[_mainWinnerIndex], ..._boardCards];
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('役判定 残り時間: $_handRemainingTime 秒', style: TextStyle(fontSize: 18)),
-          SizedBox(height: 8),
-          Text('勝者のカード (手札＋ボード)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          SizedBox(height: 8),
-          Wrap(
-            children: winnerCards.map(_buildCardWidget).toList(),
-          ),
-          SizedBox(height: 20),
-          Text('あなたの考えた役を選んでください', style: TextStyle(fontSize: 18)),
-          SizedBox(height: 10),
-          ..._hands.map((hand) => RadioListTile<String>(
-                title: Text(hand),
-                value: hand,
-                groupValue: _selectedHand,
-                onChanged: _handJudged
-                    ? null
-                    : (value) {
-                        setState(() {
-                          _selectedHand = value;
-                        });
-                      },
-              )),
-          SizedBox(height: 16),
-          if (!_handJudged)
-            Center(
-              child: ElevatedButton(
-                onPressed: _selectedHand == null ? null : _onJudgeHand,
-                child: Text('役を判定'),
-              ),
-            ),
-          if (_handJudged)
-            Center(
-              child: Column(
-                children: [
-                  Text(
-                    _handCorrect ? '✅ 正解！' : '❌ 不正解！',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  Text('正解の役: $_correctHandName'),
-                  SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: _nextQuestion,
-                    child: Text('次の問題へ'),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
+    // HandRankSelectionScreenに遷移するため、ここは使わない
+    return SizedBox.shrink();
   }
 
   @override
@@ -329,8 +314,15 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
             SizedBox(height: 16),
             Expanded(
               child: !_winnerJudged
-                  ? ListView.builder(
+                  ? GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 1.3,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                      ),
                       itemCount: widget.playerCount,
+                      physics: NeverScrollableScrollPhysics(),
                       itemBuilder: (context, i) {
                         final isSelected = _selectedWinnerIndices.contains(i);
                         return Card(
@@ -348,13 +340,13 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
                                     });
                                   },
                             child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 16),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text('プレイヤー ${i + 1} の手札',
-                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                  SizedBox(height: 8),
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                  SizedBox(height: 6),
                                   Row(
                                     children: _playerCards[i].map(_buildCardWidget).toList(),
                                   ),
@@ -365,18 +357,38 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
                         );
                       },
                     )
-                  : _winnerCorrect && !_handJudged
-                      ? _buildHandSelection()
-                      : Center(
+                  : !_winnerCorrect
+                      ? SingleChildScrollView(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                _winnerCorrect ? '✅ 勝者選択 正解！' : '❌ 勝者選択 不正解',
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                              ),
+                              Text('❌ 勝者選択 不正解', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                               Text('正解: プレイヤー ${_correctWinnerIndices.map((i) => i + 1).join(", ")}'),
                               Text('役: $_correctHandName'),
+                              SizedBox(height: 12),
+                              Text('あなたの選択: ${_selectedWinnerIndices.map((i) => i + 1).join(", ")}'),
+                              SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: _boardCards.map(_buildCardWidget).toList(),
+                              ),
+                              SizedBox(height: 12),
+                              if (_selectedWinnerIndices.isNotEmpty)
+                                Column(
+                                  children: [
+                                    Text('あなたが選んだ手札'),
+                                    ..._selectedWinnerIndices.map((idx) => Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: _playerCards[idx].map(_buildCardWidget).toList(),
+                                    )),
+                                  ],
+                                ),
+                              SizedBox(height: 8),
+                              Text('正解の手札'),
+                              ..._correctWinnerIndices.map((idx) => Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: _playerCards[idx].map(_buildCardWidget).toList(),
+                              )),
                               SizedBox(height: 12),
                               ElevatedButton(
                                 onPressed: _nextQuestion,
@@ -384,16 +396,72 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
                               ),
                             ],
                           ),
-                        ),
+                        )
+                      : _winnerCorrect && !_handJudged
+                          ? _buildHandSelection()
+                          : Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _winnerCorrect ? '✅ 勝者選択 正解！' : '❌ 勝者選択 不正解',
+                                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text('正解: プレイヤー ${_correctWinnerIndices.map((i) => i + 1).join(", ")}'),
+                                  Text('役: $_correctHandName'),
+                                  SizedBox(height: 12),
+                                  ElevatedButton(
+                                    onPressed: _nextQuestion,
+                                    child: Text('次の問題へ'),
+                                  ),
+                                ],
+                              ),
+                            ),
             ),
             if (!_winnerJudged)
               ElevatedButton(
                 onPressed: _selectedWinnerIndices.isEmpty ? null : _onJudgeWinner,
                 child: Text('判定'),
               ),
+            if ((_winnerJudged || _handJudged) && judgeResultMessage != null && judgeResultMessage!.isNotEmpty)
+              SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 24.0),
+                  child: Text(
+                    judgeResultMessage!,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+class ChallengeHistoryEntry {
+  final int questionNumber;
+  final List<List<String>> playerCards;
+  final List<String> boardCards;
+  final Set<int> selectedWinnerIndices;
+  final List<int> correctWinnerIndices;
+  final bool winnerCorrect;
+  final String? selectedHand;
+  final String? correctHand;
+  final bool handCorrect;
+  final bool timeUp;
+
+  ChallengeHistoryEntry({
+    required this.questionNumber,
+    required this.playerCards,
+    required this.boardCards,
+    required this.selectedWinnerIndices,
+    required this.correctWinnerIndices,
+    required this.winnerCorrect,
+    required this.selectedHand,
+    required this.correctHand,
+    required this.handCorrect,
+    required this.timeUp,
+  });
 } 
