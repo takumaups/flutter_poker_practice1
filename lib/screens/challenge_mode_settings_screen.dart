@@ -9,7 +9,7 @@ class ChallengeModeSettingsScreen extends StatefulWidget {
 class _ChallengeModeSettingsScreenState extends State<ChallengeModeSettingsScreen> {
   int _questionCount = 10;
   int _playerCount = 2;
-  int _timeLimit = 3;
+  int _timeLimit = 5;
 
   @override
   Widget build(BuildContext context) {
