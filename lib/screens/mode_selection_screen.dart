@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'player_count_screen.dart';
 import 'challenge_mode_settings_screen.dart';
+import 'time_attack_settings_screen.dart';
 
 class ModeSelectionScreen extends StatelessWidget {
   @override
@@ -35,6 +36,18 @@ class ModeSelectionScreen extends StatelessWidget {
                 );
               },
               child: Text('チャレンジモード'),
+            ),
+            SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TimeAttackSettingsScreen(),
+                  ),
+                );
+              },
+              child: Text('タイムアタック'),
             ),
           ],
         ),

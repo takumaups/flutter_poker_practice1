@@ -171,7 +171,7 @@ class _WinnerSelectionScreenState extends State<WinnerSelectionScreen> {
               GridView.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 1.3,
+                  childAspectRatio: 3.0,
                   mainAxisSpacing: 8,
                   crossAxisSpacing: 8,
                 ),
@@ -194,23 +194,26 @@ class _WinnerSelectionScreenState extends State<WinnerSelectionScreen> {
                                 }
                               });
                             },
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 16),
+                      child: Container(
+                        height: 80,
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'プレイヤー ${i + 1} の手札',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                                 fontFamily: 'Arial',
                               ),
                             ),
-                            SizedBox(height: 6),
-                            Row(
-                              children: playerCards[i].map(_buildCardWidget).toList(),
+                            SizedBox(height: 2),
+                            Expanded(
+                              child: Row(
+                                children: playerCards[i].map(_buildCardWidget).toList(),
+                              ),
                             ),
                           ],
                         ),
@@ -247,7 +250,17 @@ class _WinnerSelectionScreenState extends State<WinnerSelectionScreen> {
                             winnerIndex: correctWinnerIndices.first,
                           ),
                         ),
-                      );
+                      ).then((handCorrect) {
+                        // 役選択から戻ってきたら新しい問題を生成
+                        setState(() {
+                          _dealCards();
+                          selectedWinnerIndices.clear();
+                          isJudged = false;
+                          judgeResultMessage = null;
+                          correctHandName = null;
+                          correctWinnerIndices = _calculateWinners();
+                        });
+                      });
                     },
                     child: Text('役の選択へ進む'),
                   ),

@@ -317,9 +317,9 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
                   ? GridView.builder(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: 1.3,
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
+                        childAspectRatio: 1.8,
+                        mainAxisSpacing: 6,
+                        crossAxisSpacing: 6,
                       ),
                       itemCount: widget.playerCount,
                       physics: NeverScrollableScrollPhysics(),
@@ -340,15 +340,24 @@ class _ChallengeModeMainScreenState extends State<ChallengeModeMainScreen> {
                                     });
                                   },
                             child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 16),
+                              padding: EdgeInsets.symmetric(horizontal: 2, vertical: 2),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('プレイヤー ${i + 1} の手札',
-                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                                  SizedBox(height: 6),
-                                  Row(
-                                    children: _playerCards[i].map(_buildCardWidget).toList(),
+                                  Text(
+                                    'プレイヤー ${i + 1} の手札',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                      fontFamily: 'Arial',
+                                    ),
+                                  ),
+                                  SizedBox(height: 1),
+                                  Expanded(
+                                    child: Row(
+                                      children: _playerCards[i].map(_buildCardWidget).toList(),
+                                    ),
                                   ),
                                 ],
                               ),

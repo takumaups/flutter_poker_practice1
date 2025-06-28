@@ -1,3 +1,5 @@
+import '../utils/card_utils.dart';
+
 class HandResult {
   final String name;
   final int score;
@@ -11,6 +13,30 @@ class PokerHandEvaluator {
     '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7,
     '8': 8, '9': 9, 'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14,
   };
+
+  static const Map<String, int> handRankValues = {
+    'ハイカード': 0,
+    'ワンペア': 1,
+    'ツーペア': 2,
+    'スリーカード': 3,
+    'ストレート': 4,
+    'フラッシュ': 5,
+    'フルハウス': 6,
+    'フォーカード': 7,
+    'ストレートフラッシュ': 8,
+    'ロイヤルストレートフラッシュ': 9,
+  };
+
+  static String evaluateHand(List<PokerCard> cards) {
+    List<String> cardStrings = cards.map((card) => card.toString()).toList();
+    var evaluator = PokerHandEvaluator();
+    var result = evaluator.evaluate(cardStrings);
+    return result.name;
+  }
+
+  static int getHandRankValue(String handRank) {
+    return handRankValues[handRank] ?? 0;
+  }
 
   HandResult evaluate(List<String> cards) {
     if (cards.length < 5) {

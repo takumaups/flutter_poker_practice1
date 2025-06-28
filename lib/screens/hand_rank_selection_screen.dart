@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../utils/card_utils.dart';
 import '../utils/poker_hand_evaluator.dart';
@@ -6,11 +7,15 @@ class HandRankSelectionScreen extends StatefulWidget {
   final List<List<String>> playerCards;
   final List<String> boardCards;
   final int winnerIndex;
+  final int? timeLimit; // タイムアタックモード用の制限時間
+  final int? remainingTime; // タイムアタックモード用の残り時間
 
   HandRankSelectionScreen({
     required this.playerCards,
     required this.boardCards,
     required this.winnerIndex,
+    this.timeLimit,
+    this.remainingTime,
   });
 
   @override
@@ -36,6 +41,11 @@ class _HandRankSelectionScreenState extends State<HandRankSelectionScreen> {
   late PokerHandEvaluator evaluator;
   late HandResult correctResult;
   late int currentWinnerIndex;
+  
+  // タイムアタックモード用
+  Timer? _timer;
+  int _remainingTime = 0;
+  bool _isTimeUp = false;
 
   @override
   void initState() {
@@ -44,6 +54,33 @@ class _HandRankSelectionScreenState extends State<HandRankSelectionScreen> {
     winnerCards = [...widget.playerCards[currentWinnerIndex], ...widget.boardCards];
     evaluator = PokerHandEvaluator();
     correctResult = evaluator.evaluate(winnerCards);
+    
+    // タイムアタックモードの場合、タイマーを開始
+    if (widget.timeLimit != null && widget.remainingTime != null) {
+      _remainingTime = widget.remainingTime!;
+      _startTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_remainingTime > 0) {
+          _remainingTime--;
+        } else {
+          _isTimeUp = true;
+          timer.cancel();
+          // 時間切れで自動的に次の問題に進む
+          Navigator.pop(context, false);
+        }
+      });
+    });
   }
 
   Widget buildCardWidget(String card) {
@@ -149,6 +186,23 @@ class _HandRankSelectionScreenState extends State<HandRankSelectionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('役を選択'),
+        // タイムアタックモードの場合、制限時間を表示
+        actions: widget.timeLimit != null ? [
+          Container(
+            padding: EdgeInsets.only(right: 45), // 45px左に移動
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.timer, color: Colors.white),
+                SizedBox(width: 4),
+                Text(
+                  '${_remainingTime ~/ 60}:${(_remainingTime % 60).toString().padLeft(2, '0')}',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ] : null,
       ),
       body: SingleChildScrollView(
         child: Padding(
