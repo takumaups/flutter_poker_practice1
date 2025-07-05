@@ -171,9 +171,9 @@ class _WinnerSelectionScreenState extends State<WinnerSelectionScreen> {
               GridView.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 3.0,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
+                  childAspectRatio: 1.8,
+                  mainAxisSpacing: 6,
+                  crossAxisSpacing: 6,
                 ),
                 itemCount: widget.playerCount,
                 physics: NeverScrollableScrollPhysics(),
@@ -194,22 +194,21 @@ class _WinnerSelectionScreenState extends State<WinnerSelectionScreen> {
                                 }
                               });
                             },
-                      child: Container(
-                        height: 80,
-                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 2, vertical: 2),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'プレイヤー ${i + 1} の手札',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                                 fontFamily: 'Arial',
                               ),
                             ),
-                            SizedBox(height: 2),
+                            SizedBox(height: 1),
                             Expanded(
                               child: Row(
                                 children: playerCards[i].map(_buildCardWidget).toList(),
